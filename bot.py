@@ -92,7 +92,7 @@ async def on_message(message):
             what = 'long'
         await message.channel.send('```' + getvreme(what) + '```')
 
-    if message.content.lower().startswith('radar'): and valid_channel(message.channel.name):
+    if message.content.lower().startswith('radar') and valid_channel(message.channel.name):
         radar_gif = cached('radar', binurl='https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif')
         await message.channel.send(file=discord.File(radar_gif, filename='radar.gif'))
 

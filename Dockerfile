@@ -7,4 +7,4 @@ COPY bot.py ./
 COPY settings.py.prod ./settings.py
 RUN pip install -r requirements.txt
 
-CMD ["python", "bot.py"]
+ENTRYPOINT ["python", "bot.py"]
