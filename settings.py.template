@@ -1,0 +1,9 @@
+
+TOKEN = 'discord bot token'
+
+LOCATIONS = (
+        'Ljubljana',
+        'Letališče Edvarda Rusjana Maribor',
+        'Letališče Portorož',
+        )
+
