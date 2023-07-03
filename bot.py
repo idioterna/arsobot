@@ -1,6 +1,5 @@
-import discord, time, urllib.request, random
+import discord, time, urllib.request, random, logging, sys
 import settings
-import logging
 from pyquery import PyQuery as pq
 from io import BytesIO
 
@@ -10,6 +9,7 @@ intents.members = True
 intents.presences = True
 intents.message_content = True
 
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 client = discord.Client(intents=intents)
