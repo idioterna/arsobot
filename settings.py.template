@@ -7,3 +7,11 @@ LOCATIONS = (
         'Letališče Portorož',
         )
 
+VALID_CHANNELS = [
+        'onlypost',
+        'inchannels',
+        'whosenames',
+        'containone',
+        'ofthesesstrings',
+        ]
+
