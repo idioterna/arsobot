@@ -31,7 +31,7 @@ def valid_channel(name):
 def cached(what, url=None, binurl=None, duration=600):
     global cache
     if not cache.get(f'{what}_data') or cache.get(f'{what}_age', 0) + duration < time.time():
-        logger.info(f'{what} is stale, {cache.get(f'{what}_age')}')
+        logger.info(f'{what} cache miss')
         try:
             if url:
                 newdata = pq(str(urlopen(url).read(), 'utf-8'))
@@ -43,6 +43,8 @@ def cached(what, url=None, binurl=None, duration=600):
         except:
             logging.exception(f'fetching {url} {binurl}')
         cache[f'{what}_age'] = time.time()
+    else:
+        logger.info(f'{what} cache hit')
     return cache.get(f'{what}_data')
 
 def getvreme(what='long'): # or long or full
