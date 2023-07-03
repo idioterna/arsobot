@@ -39,7 +39,7 @@ def cached(what, url=None, binurl=None, duration=600):
         except:
             pass
         cache[f'{what}_age'] = time.time()
-    return cache[f'{what}_data']
+    return cache.get(f'{what}_data')
 
 def getvreme(what='long'): # or long or full
     napoved = cached('napoved', 'https://meteo.arso.gov.si/uploads/probase/www/fproduct/text/sl/fcast_si_text.html')
@@ -90,11 +90,17 @@ async def on_message(message):
             what = message.content.split()[1]
         except IndexError:
             what = 'long'
-        await message.channel.send('```' + getvreme(what) + '```')
+        try:
+            await message.channel.send('```' + getvreme(what) + '```')
+        except Exception as e:
+            await message.channel.send('```' + str(e) + '```')
 
     if message.content.lower().startswith('radar') and valid_channel(message.channel.name):
-        radar_gif = cached('radar', binurl='https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif')
-        await message.channel.send(file=discord.File(radar_gif, filename='radar.gif'))
+        try:
+            radar_gif = cached('radar', binurl='https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif')
+            await message.channel.send(file=discord.File(radar_gif, filename='radar.gif'))
+        except Exception as e:
+            await message.channel.send('```' + str(e) + '```')
 
 client.run(settings.TOKEN)
 
