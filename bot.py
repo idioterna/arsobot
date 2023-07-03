@@ -1,5 +1,6 @@
 import discord, time, urllib.request, random
 import settings
+import logging
 from pyquery import PyQuery as pq
 from io import BytesIO
 
@@ -8,6 +9,8 @@ intents.guilds = True
 intents.members = True
 intents.presences = True
 intents.message_content = True
+
+logger = logging.getLogger(__name__)
 
 client = discord.Client(intents=intents)
 
@@ -28,6 +31,7 @@ def valid_channel(name):
 def cached(what, url=None, binurl=None, duration=600):
     global cache
     if not cache.get(f'{what}_data') or cache.get(f'{what}_age', 0) + duration < time.time():
+        logger.info(f'{what} is stale, {cache.get(f'{what}_age')}')
         try:
             if url:
                 newdata = pq(str(urlopen(url).read(), 'utf-8'))
@@ -37,7 +41,7 @@ def cached(what, url=None, binurl=None, duration=600):
                 raise ValueError("pass url or binurl")
             cache[f'{what}_data'] = newdata
         except:
-            pass
+            logging.exception(f'fetching {url} {binurl}')
         cache[f'{what}_age'] = time.time()
     return cache.get(f'{what}_data')
 
@@ -78,7 +82,7 @@ def getvreme(what='long'): # or long or full
 
 @client.event
 async def on_ready():
-    print(f'We have logged in as {client.user}')
+    logger.info(f'We have logged in as {client.user}')
 
 @client.event
 async def on_message(message):
