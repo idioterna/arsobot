@@ -45,7 +45,10 @@ def cached(what, url=None, binurl=None, duration=600):
         cache[f'{what}_age'] = time.time()
     else:
         logger.info(f'{what} cache hit')
-    return cache.get(f'{what}_data')
+    val = cache.get(f'{what}_data')
+    age = time.time() - cache.get(f'{what}_age')
+    logger.info(f'{what} returned at age {age}, {len(val)} bytes')
+    return val
 
 def getvreme(what='long'): # or long or full
     napoved = cached('napoved', 'https://meteo.arso.gov.si/uploads/probase/www/fproduct/text/sl/fcast_si_text.html')
