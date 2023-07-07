@@ -18,7 +18,8 @@ cache = {}
 
 def l2u(s):
     if type(s) == str:
-        return str(bytes(s, 'latin1'), 'utf-8')
+        #return str(bytes(s, 'latin1'), 'utf-8')
+        return s
     if type(s) == bytes:
         return str(s, 'utf-8')
 
@@ -34,7 +35,10 @@ def cached(what, url=None, binurl=None, duration=600):
         logger.info(f'{what} cache miss')
         try:
             if url:
-                newdata = pq(str(urlopen(url).read(), 'utf-8'))
+                r = urllib.request.urlopen(url)
+                s = r.read()
+                t = s.decode('utf-8')
+                newdata = pq(t)
             elif binurl:
                 newdata = BytesIO(urllib.request.urlopen(binurl).read())
             else:
@@ -43,12 +47,13 @@ def cached(what, url=None, binurl=None, duration=600):
         except:
             logging.exception(f'fetching {url} {binurl}')
         cache[f'{what}_age'] = time.time()
+        return newdata
     else:
         logger.info(f'{what} cache hit')
-    val = cache.get(f'{what}_data')
-    age = time.time() - cache.get(f'{what}_age')
-    logger.info(f'{what} returned at age {age}, {len(val)} bytes')
-    return val
+        val = cache.get(f'{what}_data')
+        if type(val) == BytesIO:
+            val.seek(0)
+        return val
 
 def getvreme(what='long'): # or long or full
     napoved = cached('napoved', 'https://meteo.arso.gov.si/uploads/probase/www/fproduct/text/sl/fcast_si_text.html')
@@ -102,6 +107,7 @@ async def on_message(message):
         try:
             await message.channel.send('```' + getvreme(what) + '```')
         except Exception as e:
+            logger.exception("vreme")
             await message.channel.send('```' + str(e) + '```')
 
     if message.content.lower().startswith('radar') and valid_channel(message.channel.name):
@@ -109,6 +115,7 @@ async def on_message(message):
             radar_gif = cached('radar', binurl='https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif')
             await message.channel.send(file=discord.File(radar_gif, filename='radar.gif'))
         except Exception as e:
+            logger.exception("radar")
             await message.channel.send('```' + str(e) + '```')
 
 client.run(settings.TOKEN)
