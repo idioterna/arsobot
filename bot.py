@@ -131,7 +131,8 @@ async def on_message(message):
                 radar_gif = cached('radar-at',
                     binurl='https://www.austrocontrol.at/jart/met/radar/loop.gif')
             else:
-                return 'ne vem kaj je to ' + what + ', lahko je si, hr, at'
+                await message.channel.send('```ne vem kaj je to ' + what + ', lahko je si, hr, at```')
+                return
             await message.channel.send(file=discord.File(radar_gif, filename='radar.gif'))
         except Exception as e:
             logger.exception("radar")
