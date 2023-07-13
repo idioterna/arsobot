@@ -56,8 +56,10 @@ def cached(what, url=None, binurl=None, duration=600):
         return val
 
 def getvreme(what='long'): # or long or full
-    napoved = cached('napoved', 'https://meteo.arso.gov.si/uploads/probase/www/fproduct/text/sl/fcast_si_text.html')
-    podatki = cached('podatki', 'https://meteo.arso.gov.si/uploads/probase/www/observ/surface/text/sl/observation_si_latest.html')
+    napoved = cached('napoved',
+        'https://meteo.arso.gov.si/uploads/probase/www/fproduct/text/sl/fcast_si_text.html')
+    podatki = cached('podatki',
+        'https://meteo.arso.gov.si/uploads/probase/www/observ/surface/text/sl/observation_si_latest.html')
     text_podatki = '\n'
     for location in settings.LOCATIONS:
         line = podatki('td').filter(lambda i, this: location == l2u(pq(this).text()))
@@ -99,7 +101,9 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.content.lower().startswith('vreme') and len(message.content.split()) < 3 and valid_channel(message.channel.name):
+    if (message.content.lower().startswith('vreme')
+            and len(message.content.split()) < 3
+            and valid_channel(message.channel.name)):
         try:
             what = message.content.split()[1]
         except IndexError:
@@ -110,13 +114,27 @@ async def on_message(message):
             logger.exception("vreme")
             await message.channel.send('```' + str(e) + '```')
 
-    if message.content.lower().startswith('radar') and valid_channel(message.channel.name):
+    if (message.content.lower().startswith('radar')
+            and valid_channel(message.channel.name)):
         try:
-            radar_gif = cached('radar', binurl='https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif')
+            what = message.content.split()[1]
+        except IndexError:
+            what = 'si'
+        try:
+            if what == 'si':
+                radar_gif = cached('radar-si',
+                    binurl='https://meteo.arso.gov.si/uploads/probase/www/observ/radar/si0-rm-anim.gif')
+            elif what == 'hr':
+                radar_gif = cached('radar-hr',
+                    binurl='https://vrijeme.hr/anim_kompozit.gif')
+            elif what == 'at':
+                radar_gif = cached('radar-at',
+                    binurl='https://www.austrocontrol.at/jart/met/radar/loop.gif')
+            else:
+                return 'ne vem kaj je to ' + what + ', lahko je si, hr, at'
             await message.channel.send(file=discord.File(radar_gif, filename='radar.gif'))
         except Exception as e:
             logger.exception("radar")
             await message.channel.send('```' + str(e) + '```')
 
 client.run(settings.TOKEN)
-
