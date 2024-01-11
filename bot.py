@@ -121,27 +121,24 @@ async def on_message(message):
             await message.channel.send('```' + str(e) + '```')
 
     if (message.content.lower().startswith('!definicija')
-            and len(message.content.split()) < 4
             and valid_channel(message.channel.name)):
-        try:
-            what = message.content.split()[1]
-        except IndexError:
-            await message.channel.send('```Vnesi besedo.```')
+        
+        what = message.content.split(maxsplit=1)[1]
     
+        how_many = 1
+        if what.split()[-1].isdigit():
+            what, how_many = what.rsplit(maxsplit=1)
+            
         try:
-            how_many = message.content.split()[2]
-        except IndexError:
-            how_many = 1
-
-        try:
-            how_many = int(how_many)
-        except ValueError:
-            await message.channel.send('```Vnesi pravo številko.```')
-
-        try:
-            results = getdefinition(what, how_many)
+            
+            results = getdefinition(what, int(how_many))
+            
             for result in results:
                 await message.channel.send(f'```Beseda: {result.word}\nDefinicija: {result.definition}\nPrimer: {result.example}\nAvtor: {result.author}\nŠtevilo :thumbs_up:: {result.thumbs_up}\nŠtevilo :thumbs_down::{result.thumbs_down}\nVpisano ob: {result.written_on}```')
+            
+            if not results:
+                await message.channel.send(f'```{what} ne najdem na urbandictionary.```')
+
         except Exception as e:
             logger.exception("vreme")
             await message.channel.send('```' + str(e) + '```')
