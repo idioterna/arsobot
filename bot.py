@@ -23,8 +23,9 @@ def l2u(s):
         return s
     if type(s) == bytes:
         return str(s, 'utf-8')
-    if s is None:
-        return ''
+    if s: # if s has value, complain
+        logger.warning(f"can't handle {s} of type {type(s)}")
+    return '' # but don't make a mess
 
 def valid_channel(name):
     for c in settings.VALID_CHANNELS:
@@ -48,7 +49,7 @@ def cached(what, url=None, binurl=None, duration=600):
                 raise ValueError("pass url or binurl")
             cache[f'{what}_data'] = newdata
         except:
-            logging.exception(f'fetching {url} {binurl}')
+            logger.exception(f'fetching {url} {binurl}')
         cache[f'{what}_age'] = time.time()
         return newdata
     else:
@@ -124,23 +125,16 @@ async def on_message(message):
 
     if (message.content.lower().startswith('!definicija')
             and valid_channel(message.channel.name)):
-        
         what = message.content.split(maxsplit=1)[1]
-    
         how_many = 1
         if what.split()[-1].isdigit():
             what, how_many = what.rsplit(maxsplit=1)
-            
         try:
-            
             results = getdefinition(what, int(how_many))
-            
             for result in results:
                 await message.channel.send(f'```Beseda: {result.word}\nDefinicija: {result.definition}\nPrimer: {result.example}\nAvtor: {result.author}\nŠtevilo :thumbs_up:: {result.thumbs_up}\nŠtevilo :thumbs_down::{result.thumbs_down}\nVpisano ob: {result.written_on}```')
-            
             if not results:
                 await message.channel.send(f'```{what} ne najdem na urbandictionary.```')
-                
         except Exception as e:
             logger.exception("definicija")
             await message.channel.send('```' + str(e) + '```')
