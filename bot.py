@@ -23,7 +23,7 @@ def l2u(s):
         return s
     if type(s) == bytes:
         return str(s, 'utf-8')
-    if type(s) == type(None):
+    if s is None:
         return ''
 
 def valid_channel(name):
