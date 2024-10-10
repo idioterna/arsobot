@@ -15,3 +15,4 @@ VALID_CHANNELS = [
         'ofthesesstrings',
         ]
 
+MAX_MSG_LEN=1900

@@ -118,7 +118,18 @@ async def on_message(message):
         except IndexError:
             what = 'long'
         try:
-            await message.channel.send('```' + getvreme(what) + '```')
+            vreme = getvreme(what)
+            if len(vreme) < settings.MAX_MSG_LEN:
+                await message.channel.send('```' + vreme + '```')
+            else:
+                bodysofar = ''
+                for chunk in vreme.split('\n\n'):
+                    if len(bodysofar) + len(chunk) > settings.MAX_MSG_LEN:
+                        await message.channel.send('```' + bodysofar + '```')
+                        bodysofar = ''
+                    bodysofar += chunk + '\n\n'
+                if bodysofar:
+                    await message.channel.send('```' + bodysofar + '```')
         except Exception as e:
             logger.exception("vreme")
             await message.channel.send('```' + str(e) + '```')
