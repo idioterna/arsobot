@@ -110,8 +110,7 @@ async def on_message(message):
     if message.author == client.user: # don't ever reply to yourself
         return
 
-    if 'spam' in message.content.lower().split()
-            or 'spamček' in message.content.lower().split():
+    if 'spam' in message.content.lower():
         spam = BytesIO(open('spam.mp4').read())
         await message.channel.send(file=discord.File(spam, filename='spam.mp4'))
 
