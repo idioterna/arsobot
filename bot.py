@@ -112,7 +112,7 @@ async def on_message(message):
 
     if 'spam' in message.content.lower():
         spam = BytesIO(open('spam.mp4', 'rb').read())
-        await message.channel.send(file=discord.File(spam, filename=f'{"".join([random.choice(string.lowercase + string.digits) for x in range(32)])}.mp4'))
+        await message.channel.send(file=discord.File(spam, filename=f'{"".join([random.choice(string.ascii_lowercase + string.digits) for x in range(32)])}.mp4'))
 
     if (message.content.lower().startswith('vreme')
             and len(message.content.split()) < 3
