@@ -107,8 +107,12 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    if message.author == client.user:
+    if message.author == client.user: # don't ever reply to yourself
         return
+
+    if ('spam' in message.content.lower().split()):
+        spam = BytesIO(file('spam.mp4').read())
+        await message.channel.send(file=discord.File(spam, filename='spam.mp4'))
 
     if (message.content.lower().startswith('vreme')
             and len(message.content.split()) < 3
