@@ -1,4 +1,4 @@
-import discord, time, urllib.request, random, logging, sys
+import discord, time, urllib.request, random, logging, sys, string
 import settings
 from pyquery import PyQuery as pq
 from io import BytesIO
