@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 client = discord.Client(intents=intents)
 
 cache = {}
+last_spam = 0
 
 def l2u(s):
     if type(s) == str:
@@ -111,10 +112,11 @@ async def on_message(message):
         return
 
     if 'spam' in message.content.lower():
-        await message.channel.send(
-                file=discord.File(BytesIO(open('spam.mp4', 'rb').read()),
-                filename=f'''{"".join([random.choice(string.ascii_lowercase + string.digits)
-                                  for x in range(32)])}.mp4'''))
+        if time.time() - last_spam > settings.SPAM_LIMIT:
+            await message.channel.send(
+                    file=discord.File(BytesIO(open('spam.mp4', 'rb').read()),
+                    filename=f'''{"".join([random.choice(string.ascii_lowercase + string.digits)
+                                      for x in range(32)])}.mp4'''))
 
     if (message.content.lower().startswith('vreme')
             and len(message.content.split()) < 3
