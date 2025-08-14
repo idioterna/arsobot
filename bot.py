@@ -111,7 +111,7 @@ async def on_message(message):
         return
 
     if 'spam' in message.content.lower():
-        spam = BytesIO(open('spam.mp4').read())
+        spam = BytesIO(open('spam.mp4', 'rb').read())
         await message.channel.send(file=discord.File(spam, filename='spam.mp4'))
 
     if (message.content.lower().startswith('vreme')
