@@ -111,7 +111,7 @@ async def on_message(message):
     if message.author == client.user: # don't ever reply to yourself
         return
 
-    if 'spam' in message.content.lower():
+    if 'spam' in message.content.lower() and valid_channel(message.channel.name)):
         if time.time() - last_spam > settings.SPAM_LIMIT:
             await message.channel.send(
                     file=discord.File(BytesIO(open('spam.mp4', 'rb').read()),
