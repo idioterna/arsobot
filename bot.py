@@ -108,6 +108,8 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
+    global last_spam
+
     if message.author == client.user: # don't ever reply to yourself
         return
 
