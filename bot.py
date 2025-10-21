@@ -36,7 +36,11 @@ def valid_channel(name):
 
 def cached(what, url=None, binurl=None, duration=600):
     global cache
-    if not cache.get(f'{what}_data') or cache.get(f'{what}_age', 0) + duration < time.time():
+    cached_data = cache.get(f'{what}_data')
+    cache_age = cache.get(f'{what}_age', 0)
+    
+    if (cached_data is None and (cache_age == 0 or cache_age + 30 < time.time())) or \
+        (cached_data is not None and cache_age + duration < time.time()):
         logger.info(f'{what} cache miss')
         try:
             if url:
@@ -49,13 +53,17 @@ def cached(what, url=None, binurl=None, duration=600):
             else:
                 raise ValueError("pass url or binurl")
             cache[f'{what}_data'] = newdata
+            cache[f'{what}_age'] = time.time()
+            return newdata
         except:
             logger.exception(f'fetching {url} {binurl}')
-        cache[f'{what}_age'] = time.time()
-        return newdata
+            # Set cache data to None and update age to avoid immediate retry
+            cache[f'{what}_data'] = None
+            cache[f'{what}_age'] = time.time()
+            return None
     else:
         logger.info(f'{what} cache hit')
-        val = cache.get(f'{what}_data')
+        val = cached_data
         if type(val) == BytesIO:
             val.seek(0)
         return val
@@ -179,6 +187,9 @@ async def on_message(message):
                     binurl='https://www.austrocontrol.at/jart/met/radar/loop.gif')
             else:
                 await message.channel.send('```ne vem kaj je to ' + what + ', lahko je si, hr, ba, at```')
+                return
+            if radar_gif is None:
+                await message.channel.send('```Napaka pri nalaganju radarskega posnetka. Prosim poskusite čez minuto.```')
                 return
             await message.channel.send(file=discord.File(radar_gif, filename='radar.gif'))
         except Exception as e:
