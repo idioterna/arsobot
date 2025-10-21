@@ -42,25 +42,32 @@ def cached(what, url=None, binurl=None, duration=600):
     if (cached_data is None and (cache_age == 0 or cache_age + 30 < time.time())) or \
         (cached_data is not None and cache_age + duration < time.time()):
         logger.info(f'{what} cache miss')
-        try:
-            if url:
-                r = urllib.request.urlopen(url)
-                s = r.read()
-                t = s.decode('utf-8')
-                newdata = pq(t)
-            elif binurl:
-                newdata = BytesIO(urllib.request.urlopen(binurl).read())
-            else:
-                raise ValueError("pass url or binurl")
-            cache[f'{what}_data'] = newdata
-            cache[f'{what}_age'] = time.time()
-            return newdata
-        except:
-            logger.exception(f'fetching {url} {binurl}')
-            # Set cache data to None and update age to avoid immediate retry
-            cache[f'{what}_data'] = None
-            cache[f'{what}_age'] = time.time()
-            return None
+        
+        for attempt in range(settings.REQUEST_RETRIES):
+            try:
+                if url:
+                    r = urllib.request.urlopen(url)
+                    s = r.read()
+                    t = s.decode('utf-8')
+                    newdata = pq(t)
+                elif binurl:
+                    newdata = BytesIO(urllib.request.urlopen(binurl).read())
+                else:
+                    raise ValueError("pass url or binurl")
+                cache[f'{what}_data'] = newdata
+                cache[f'{what}_age'] = time.time()
+                return newdata
+            except Exception as e:
+                if attempt < settings.REQUEST_RETRIES - 1:
+                    logger.warning(f'fetching {url} {binurl} attempt {attempt + 1}/{settings.REQUEST_RETRIES} failed: {e}')
+                    time.sleep(1)
+                else:
+                    logger.exception(f'fetching {url} {binurl} - all {settings.REQUEST_RETRIES} attempts failed')
+        
+        # All retries failed, set cache data to None and update age to avoid immediate retry
+        cache[f'{what}_data'] = None
+        cache[f'{what}_age'] = time.time()
+        return None
     else:
         logger.info(f'{what} cache hit')
         val = cached_data
