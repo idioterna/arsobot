@@ -3,6 +3,9 @@ import settings
 from pyquery import PyQuery as pq
 from io import BytesIO
 from pyurbandict import UrbanDict
+from flask import Flask, render_template_string, request, redirect, url_for, flash
+import threading
+import asyncio
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -15,8 +18,15 @@ logger = logging.getLogger(__name__)
 
 client = discord.Client(intents=intents)
 
+# Flask app
+app = Flask(__name__)
+app.secret_key = settings.FLASK_SECRET_KEY
+
 cache = {}
 last_spam = 0
+
+# Queue for messages to be sent to Discord (will be created in Discord event loop)
+message_queue = None
 
 def l2u(s):
     if type(s) == str:
@@ -117,9 +127,215 @@ def getdefinition(what, how_many):
     results = word.search()
     return results[:how_many]
 
+async def process_message_queue():
+    """Background task to process messages from the queue and send them to Discord"""
+    while True:
+        try:
+            # Wait for a message in the queue (async, non-blocking)
+            message = await asyncio.wait_for(message_queue.get(), timeout=1.0)
+            
+            guild = client.get_guild(settings.DISCORD_SERVER_ID)
+            if guild:
+                channel = guild.get_channel(settings.DISCORD_CHANNEL_ID)
+                if channel:
+                    await channel.send(f"**Anonimno sporočilo:**\n```{message}```")
+                    logger.info("Anonymous message sent to Discord")
+                else:
+                    logger.error("Discord channel not found")
+            else:
+                logger.error("Discord server not found")
+                
+            message_queue.task_done()
+        except asyncio.TimeoutError:
+            # No message in queue, continue waiting
+            continue
+        except Exception as e:
+            logger.exception("Error processing message queue")
+            await asyncio.sleep(1)  # Wait a bit before retrying
+
+# HTML template for the form
+FORM_TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anonimno sporočilo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        .char-counter {
+            text-align: right;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+        .char-counter.warning {
+            color: #ff9800;
+        }
+        .char-counter.error {
+            color: #f44336;
+        }
+        .submit-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+        .submit-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Anonimno sporočilo</h1>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="success-message">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="/">
+            <div class="form-group">
+                <label for="message">Vaše sporočilo:</label>
+                <textarea id="message" name="message" maxlength="1900" placeholder="Vnesite vaše anonimno sporočilo..." required>{{ request.form.message if request.form.message else '' }}</textarea>
+                <div id="char-counter" class="char-counter">0 / 1900 znakov</div>
+            </div>
+            <button type="submit" class="submit-btn" id="submit-btn">Pošlji anonimno sporočilo</button>
+        </form>
+    </div>
+
+    <script>
+        const textarea = document.getElementById('message');
+        const counter = document.getElementById('char-counter');
+        const submitBtn = document.getElementById('submit-btn');
+        
+        function updateCounter() {
+            const length = textarea.value.length;
+            const remaining = 1900 - length;
+            
+            counter.textContent = length + ' / 1900 znakov';
+            
+            if (remaining < 100) {
+                counter.className = 'char-counter warning';
+                if (remaining < 0) {
+                    counter.className = 'char-counter error';
+                    submitBtn.disabled = true;
+                } else {
+                    submitBtn.disabled = false;
+                }
+            } else {
+                counter.className = 'char-counter';
+                submitBtn.disabled = false;
+            }
+        }
+        
+        textarea.addEventListener('input', updateCounter);
+        updateCounter(); // Initial call
+    </script>
+</body>
+</html>
+'''
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        message = request.form.get('message', '').strip()
+        
+        if not message:
+            flash('Prosimo vnesite sporočilo.')
+            return redirect(url_for('index'))
+        
+        if len(message) > 1900:
+            flash('Sporočilo je predolgo. Maksimalno 1900 znakov.')
+            return redirect(url_for('index'))
+        
+        # Queue message for Discord
+        try:
+            # Schedule the put operation on the Discord event loop
+            if message_queue is not None and client.loop is not None:
+                client.loop.call_soon_threadsafe(message_queue.put_nowait, message)
+                flash('Sporočilo je bilo uspešno poslano!')
+            else:
+                flash('Napaka: Discord bot ni pripravljen. Prosimo poskusite kasneje.')
+        except Exception as e:
+            logger.exception("Error queuing anonymous message")
+            flash('Napaka pri pošiljanju sporočila. Prosimo poskusite kasneje.')
+        
+        return redirect(url_for('index'))
+    
+    return render_template_string(FORM_TEMPLATE)
+
 @client.event
 async def on_ready():
+    global message_queue
     logger.info(f'We have logged in as {client.user}')
+    
+    # Create the queue in the Discord event loop
+    message_queue = asyncio.Queue()
+    
+    # Start background task to process message queue
+    client.loop.create_task(process_message_queue())
 
 @client.event
 async def on_message(message):
@@ -203,4 +419,16 @@ async def on_message(message):
             logger.exception("radar")
             await message.channel.send('```' + str(e) + '```')
 
-client.run(settings.TOKEN)
+def run_flask():
+    app.run(host=settings.FLASK_HOST, port=settings.FLASK_PORT, debug=settings.FLASK_DEBUG)
+
+def run_discord():
+    client.run(settings.TOKEN)
+
+if __name__ == '__main__':
+    # Start Flask in a separate thread
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    
+    # Start Discord bot in main thread
+    run_discord()

@@ -20,3 +20,15 @@ MAX_MSG_LEN=1900
 SPAM_LIMIT=100
 
 REQUEST_RETRIES=3
+
+# Discord server and channel IDs for anonymous messages
+DISCORD_SERVER_ID=your_discord_server_id_here
+DISCORD_CHANNEL_ID=your_discord_channel_id_here
+
+# Flask secret key for sessions
+FLASK_SECRET_KEY='anonymous-message-secret-key'
+
+# Flask server configuration
+FLASK_HOST='0.0.0.0'
+FLASK_PORT=8455
+FLASK_DEBUG=False

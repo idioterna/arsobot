@@ -1,3 +1,4 @@
 discord.py
 pyquery==1.4.3
 python-urbandict==0.3.3
+flask[async]
