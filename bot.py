@@ -1,4 +1,4 @@
-import discord, time, urllib.request, random, logging, sys, string
+import discord, time, urllib.request, random, logging, sys, string, html2image
 import settings
 from pyquery import PyQuery as pq
 from io import BytesIO
@@ -84,6 +84,16 @@ def cached(what, url=None, binurl=None, duration=600):
         if type(val) == BytesIO:
             val.seek(0)
         return val
+
+def getsneg():
+    mejasnezenja = cached('mejasnezenja',
+        binurl='https://meteo.arso.gov.si/uploads/probase/www/fproduct/text/sl/forecast_SI_JULIAN-ALPS_latest.html')
+    mejasnezenjacss = cached('mejasnezenjacss',
+        binurl='https://meteo.arso.gov.si/uploads/meteo/style/css/webmet.css')
+    chrome = html2image.Html2Image(size=(850,1030), output_path='/app', custom_flags=['--no-sandbox'])
+    chrome.screenshot(html_str=mejasnezenja.read().decode('utf-8'), css_str=mejasnezenjacss.read().decode('utf-8'), save_as='meja_snezenja.png')
+    return open('/app/meja_snezenja.png')
+
 
 def getvreme(what='long'): # or long or full
     napoved = cached('napoved',
@@ -351,6 +361,15 @@ async def on_message(message):
                     file=discord.File(BytesIO(open('spam.mp4', 'rb').read()),
                     filename=f'''{"".join([random.choice(string.ascii_lowercase + string.digits)
                                       for x in range(32)])}.mp4'''))
+
+    if (message.content.lower().startswith('meja sneženja')
+            and valid_channel(message.channel.name)):
+        try:
+            meja_snezenja = getsneg()
+            await message.channel.send(file=discord.File('/app/meja_snezenja.png', filename='meja_snezenja.png'))
+        except Exception as e:
+            logger.exception("meja sneženja")
+            await message.channel.send('```' + str(e) + '```')
 
     if (message.content.lower().startswith('vreme')
             and len(message.content.split()) < 3
